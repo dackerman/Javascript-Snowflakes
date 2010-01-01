@@ -1,0 +1,163 @@
+<html>
+<head><title></title>
+<style>
+body{
+	background-image:url('bg.jpg');
+	color:white;
+}
+.snowflake{
+	background-color:white;
+	position:absolute;
+	top:5px;
+	left:5px;
+	width:3px;
+	height:3px;
+}
+</style>
+<script>
+//SNOWFLAKE SCRIPT
+//By David Ackerman - December 2009
+
+//Configurable Parameters
+DEBUG = false;
+
+//Max number of particles on the screen at once
+//Can slow down if you set really high
+MAX_FLAKES = 100;
+
+//How smooth the animation is (NOT how fast they move)
+//The smaller the number, the more processor power it
+//requires. (units are # of milliseconds between updates)
+UPDATE_SPEED = 50;
+
+//How fast new flakes are created.  This is mainly for
+//The beginning where the flakes are made.  A flake is 
+//automatically created if it dies by going out of bounds
+SPAWN_RATE = 1023;
+
+//Intensity of wind.  This sets how much the flakes are affected
+//by wind.  The algorithm is sinusoidal, so it will move the flakes
+//both left and right over time.
+WIND_INTENSITY = 0.7;
+
+//Bounds of snowflakes.  When they go out of bounds, they die and are
+//recreated at the top of the screen.  You should set these values to
+//your screen size, or just the content of your screen.
+WINDOW_BOUNDS = {
+	minx:0,
+	maxx:1000,
+	miny:0,
+	maxy:600,
+};
+
+//Code - Shouldn't need to edit much down here :)
+
+flakes = [];
+deadflakes = [];
+function startSnowflakes(){
+	if(!DEBUG)
+		document.getElementById('debug').style.visibility = "hidden";
+	for(var i=0;i<MAX_FLAKES;i++){
+		var flake = document.createElement('div');
+		flake.setAttribute('id','flake'+i);
+		flake.setAttribute('class','snowflake');
+		flake.style.visibility = "hidden";
+		document.body.appendChild(flake);
+		deadflakes[i] = {
+			x: getRandomStartingX(),
+			y: getRandomStartingY(),
+			xspeed: Math.random() * 10 + 10,
+			yspeed: Math.random() * 10 + 10,
+			floatiness: Math.random() * 20 + 5,
+			div : flake			
+		};
+	}
+	window.setInterval("updateSnowflakes()",UPDATE_SPEED);
+	window.setInterval("spawnSnowflake()",SPAWN_RATE);
+	window.setInterval("updateWind()",100);
+}
+
+function killSnowflake(i){
+	var f = flakes[i];
+	var minx = WINDOW_BOUNDS.minx + 3;
+	var miny = WINDOW_BOUNDS.miny + 3;
+	var maxx = WINDOW_BOUNDS.maxx - 3;
+	var maxy = WINDOW_BOUNDS.maxy - 3;
+	if(f.x < 0)
+		f.x += maxx;
+	else
+		f.x = minx + f.x % (maxx - minx);
+	if(f.y < 0)
+		f.y += maxy;
+	else
+		f.y = miny + f.y % (maxy - miny);
+}
+
+WIND_BIAS = 0;
+startTime = getCurrentTime();
+function getCurrentTime(){
+	d = new Date();
+	return d.getTime();
+}
+function updateWind(){
+	var t = (getCurrentTime() - startTime) / 1000.0;
+	WIND_BIAS = (Math.sin(0.1*t + Math.PI)+0.2*Math.sin(1*t)) * WIND_INTENSITY;
+	setDebugElement("windbias",WIND_BIAS);
+}
+
+function setDebugElement(name,value){
+	if(DEBUG)
+		document.getElementById("debug_"+name).innerHTML = "" + value;
+}
+
+function spawnSnowflake(){
+	var babyFlake = deadflakes.pop();
+	flakes.push(babyFlake);
+}
+
+function outOfBounds(flake){
+	return (flake.x <= WINDOW_BOUNDS.minx || flake.x >= WINDOW_BOUNDS.maxx || flake.y <= WINDOW_BOUNDS.miny || flake.y >= WINDOW_BOUNDS.maxy);
+}
+
+SLOWDOWN_FACTOR = UPDATE_SPEED / 1000.0;
+function updateSnowflakes(){
+	for(var i=0;i<flakes.length;i++){
+		var fl = flakes[i];
+		if(fl.div.style.visibility == "hidden")
+			fl.div.style.visibility = "visible";
+		fl.x += (Math.random() * fl.floatiness * 2 - fl.floatiness) * SLOWDOWN_FACTOR + WIND_BIAS;
+		fl.y += (Math.random() * fl.floatiness * 2) * SLOWDOWN_FACTOR;
+		if(outOfBounds(fl)){
+			killSnowflake(i);
+			continue;
+		}
+		
+		fl.div.style.top = Math.round(fl.y) + "px";
+		fl.div.style.left = Math.round(fl.x) + "px";
+	}
+	setDebugElement("liveparticles",flakes.length);
+	setDebugElement("deadparticles",deadflakes.length);
+	t += UPDATE_SPEED;
+}
+
+function getRandomStartingX(){
+	var min = WINDOW_BOUNDS.minx + 3;
+	var max = WINDOW_BOUNDS.maxx - 3;
+	return Math.floor(min + Math.random()*(max-min));
+}
+
+function getRandomStartingY(){
+	return Math.floor(3 + Math.random()*15);
+}
+
+</script>
+</head>
+<body onload="startSnowflakes()">
+<div id="debug" class="debug">
+Live Particles: <span id="debug_liveparticles"></span> <br />
+Dead Particles: <span id="debug_deadparticles"></span> <br />
+Wind Bias: <span id="debug_windbias"></span> <br />
+How's my cute little snow flake?
+</div>
+</body>
+</html>
